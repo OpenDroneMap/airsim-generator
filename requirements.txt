@@ -1,0 +1,5 @@
+Pillow==8.2.0
+airsim==1.6.0
+rasterio==1.2.10
+numpy==1.22.0
+piexif==1.1.3
