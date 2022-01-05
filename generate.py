@@ -7,6 +7,7 @@ import numpy as np
 import rasterio
 import argparse
 import json
+import os
 from utils import save_jpg, GeoToLocalTransformer, get_utm_proj
 from camera import Camera
 
@@ -23,6 +24,10 @@ parser.add_argument('--altitude',
                 type=float,
                 default=40,
                 help='Survey altitude (meters). Default: %(default)s')
+parser.add_argument('--output-dir',
+                type=str,
+                default=".",
+                help="Directory where to output results. Default: %(default)s")
 
 args = parser.parse_args()
 #gps_origin = json.loads(args.gps_origin)
@@ -59,30 +64,30 @@ print("Area: %.2f m^2" % (area_width * area_height))
 
 print("Geographical center (UTM)... ", end="")
 geo_center = [boundaries[0][0] + area_width / 2.0, boundaries[0][1] + area_height / 2.0, boundaries[0][2]]
+print(geo_center)
 
 c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj)
 
 c.move_by(0, 0, -args.altitude) # Go to altitude
 
-for y in range(0, 10):
+for y in range(0, 5):
     c.move_by(0, 5)
-    c.capture('perspective%s.jpg' % y)
+    c.capture(os.path.join(args.output_dir, 'perspective%s.jpg' % y))
 
-exit(1)
+# c.move_by(-20, 20, 0)
+# responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=True)])
+# response = responses[0]
 
-responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=True)])
-response = responses[0]
+# data = np.array(response.image_data_float).reshape((response.width, response.height))
 
-data = np.array(response.image_data_float).reshape((800, 1000))
+# profile = {
+#     'driver': 'GTiff',
+#     'height': data.shape[0], 
+#     'width': data.shape[1],
+#     'count': 1, 
+#     'dtype': str(data.dtype)
+# }
+# with rasterio.open("dsm.tif", "w", **profile) as f:
+#     f.write(data, 1)
 
-profile = {
-    'driver': 'GTiff',
-    'height': data.shape[0], 
-    'width': data.shape[1],
-    'count': 1, 
-    'dtype': str(data.dtype)
-}
-with rasterio.open("dsm.tif", "w", **profile) as f:
-    f.write(data, 1)
-
-print("OK")
+# print("OK")

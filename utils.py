@@ -44,17 +44,12 @@ class GeoToLocalTransformer:
     def reverse(self, x, y, z):
         return self.cti.TransformPoint(x, y, z)
 
+def to_rational(number):
+    f = Fraction(str(number))
+    return (f.numerator, f.denominator)
 
 # Based on https://gist.github.com/c060604/8a51f8999be12fc2be498e9ca56adc72
-def gps_exif_dict(lat, lng, altitude):
-    def change_to_rational(number):
-        """convert a number to rantional
-        Keyword arguments: number
-        return: tuple like (1, 2), (numerator, denominator)
-        """
-        f = Fraction(str(number))
-        return (f.numerator, f.denominator)
-
+def gps_exif_ifd(lat, lng, altitude):
     def to_deg(value, loc):
         """convert decimal coordinates into degrees, munutes and seconds tuple
         Keyword arguments: value is float gps-value, loc is direction list ["S", "N"] or ["W", "E"]
@@ -76,16 +71,16 @@ def gps_exif_dict(lat, lng, altitude):
     lat_deg = to_deg(lat, ["S", "N"])
     lng_deg = to_deg(lng, ["W", "E"])
 
-    exiv_lat = (change_to_rational(lat_deg[0]), change_to_rational(lat_deg[1]), change_to_rational(lat_deg[2]))
-    exiv_lng = (change_to_rational(lng_deg[0]), change_to_rational(lng_deg[1]), change_to_rational(lng_deg[2]))
+    exiv_lat = (to_rational(lat_deg[0]), to_rational(lat_deg[1]), to_rational(lat_deg[2]))
+    exiv_lng = (to_rational(lng_deg[0]), to_rational(lng_deg[1]), to_rational(lng_deg[2]))
     gps_ifd = {
         piexif.GPSIFD.GPSVersionID: (2, 0, 0, 0),
         piexif.GPSIFD.GPSAltitudeRef: 1 if altitude < 0 else 0,
-        piexif.GPSIFD.GPSAltitude: change_to_rational(abs(altitude)),
+        piexif.GPSIFD.GPSAltitude: to_rational(abs(altitude)),
         piexif.GPSIFD.GPSLatitudeRef: lat_deg[3],
         piexif.GPSIFD.GPSLatitude: exiv_lat,
         piexif.GPSIFD.GPSLongitudeRef: lng_deg[3],
         piexif.GPSIFD.GPSLongitude: exiv_lng,
     }
-    print(gps_ifd)
-    return {"GPS": gps_ifd}
+
+    return gps_ifd

@@ -3,8 +3,9 @@ import piexif
 import io
 from PIL import Image
 from math import pi
+from datetime import datetime, timedelta
 
-from utils import gps_exif_dict, GeoToLocalTransformer
+from utils import gps_exif_ifd, GeoToLocalTransformer, to_rational
 
 LOOK_DOWN = airsim.to_quaternion(-pi/2, 0, 0)
 
@@ -23,6 +24,8 @@ class Camera:
         vpos = self.client.simGetVehiclePose().position
         self.position = [vpos.x_val, vpos.y_val, vpos.z_val]
 
+        self.time = datetime.now()
+
     def move_by(self, x, y, z = 0):
         self.position[0] += x
         self.position[1] += y
@@ -34,11 +37,13 @@ class Camera:
 
         pose = airsim.Pose(airsim.Vector3r(self.position[0], self.position[1], self.position[2]), LOOK_DOWN)
         self.client.simSetVehiclePose(pose, ignore_collision=True)
+
+        self.time += timedelta(0, 10)
     
     def get_gps(self):
         # Convert geo to lat/lon/alt
         p = self.ct.reverse(*self.geo)
-        print(p)
+        
         return {
             'longitude': p[0],
             'latitude': p[1],
@@ -47,8 +52,28 @@ class Camera:
 
     def capture(self, filename):
         imData = self.client.simGetImage('0', self.imageType)
+        im = Image.open(io.BytesIO(imData))
 
         gps = self.get_gps()
-        im = Image.open(io.BytesIO(imData))
+
+        exif_d = {
+            'GPS': gps_exif_ifd(gps['latitude'], gps['longitude'], gps['altitude']),
+            '0th': {
+                piexif.ImageIFD.Make: "Microsoft",
+                piexif.ImageIFD.Model: "AirSim",
+                piexif.ImageIFD.ImageWidth: im.width,
+                piexif.ImageIFD.ImageLength: im.height,
+            },
+            'Exif': {
+                piexif.ExifIFD.DateTimeOriginal: self.time.strftime("%Y:%m:%d %H:%M:%S"),
+                piexif.ExifIFD.FocalLength: (36, 10), #mm
+                piexif.ExifIFD.FocalPlaneResolutionUnit: 4, #mm,
+                piexif.ExifIFD.FocalPlaneXResolution: to_rational(round(im.width / 7.2, 7)),
+                piexif.ExifIFD.FocalPlaneYResolution: to_rational(round(im.width / 7.2, 7)),
+            }
+        }
+        
         im = im.convert('RGB')
-        im.save(filename, exif=piexif.dump(gps_exif_dict(gps['latitude'], gps['longitude'], gps['altitude'])))
+        im.save(filename, exif=piexif.dump(exif_d))
+
+        print(filename)
