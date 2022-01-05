@@ -4,6 +4,7 @@ import piexif
 from osgeo import osr
 import math
 from fractions import Fraction
+from camera_constants import FOCAL, CCD_WIDTH
 
 def save_jpg(filename, image_data):
     im = Image.open(io.BytesIO(image_data))
@@ -84,3 +85,36 @@ def gps_exif_ifd(lat, lng, altitude):
     }
 
     return gps_ifd
+
+
+def rotate(point, center, degrees):
+    r = math.radians(degrees)
+    return [math.cos(r) * (point[0] - center[0]) - math.sin(r) * (point[1] - center[1]) + center[0],
+            math.sin(r) * (point[0] - center[0]) + math.cos(r) * (point[1] - center[1]) + center[1]]
+
+def image_footprint(camera_pos, image_width, image_height):
+    altitude = camera_pos[2]
+
+    sensor_width = image_width / CCD_WIDTH
+    sensor_height = image_height / CCD_WIDTH
+
+    x_view = 2.0 * math.atan(sensor_width / (2.0 * FOCAL))
+    y_view = 2.0 * math.atan(sensor_height / (2.0 * FOCAL))
+
+    print(sensor_width, sensor_height)
+
+    pitch = -90 # nadir
+    roll = 0
+    yaw = 0 # TODO!
+
+    bottom = altitude * math.tan(math.radians(90.0 + pitch) - 0.5 * y_view)
+    top = altitude * math.tan(math.radians(90.0 + pitch) + 0.5 * y_view)
+    left = altitude * math.tan(math.radians(roll) - 0.5 * x_view)
+    right = altitude * math.tan(math.radians(roll) + 0.5 * x_view)
+
+    ul = rotate((camera_pos[0] + left, camera_pos[1] + top), camera_pos, -yaw)
+    ur = rotate((camera_pos[0] + right, camera_pos[1] + top), camera_pos, -yaw)
+    ll = rotate((camera_pos[0] + left, camera_pos[1] + bottom), camera_pos, -yaw)
+    lr = rotate((camera_pos[0] + right, camera_pos[1] + bottom), camera_pos, -yaw)
+
+    return [ul, ur, lr, ll]

@@ -6,6 +6,7 @@ from math import pi
 from datetime import datetime, timedelta
 
 from utils import gps_exif_ifd, GeoToLocalTransformer, to_rational
+from camera_constants import FOCAL, CCD_WIDTH
 
 LOOK_DOWN = airsim.to_quaternion(-pi/2, 0, 0)
 
@@ -66,10 +67,10 @@ class Camera:
             },
             'Exif': {
                 piexif.ExifIFD.DateTimeOriginal: self.time.strftime("%Y:%m:%d %H:%M:%S"),
-                piexif.ExifIFD.FocalLength: (36, 10), #mm
+                piexif.ExifIFD.FocalLength: to_rational(FOCAL),
                 piexif.ExifIFD.FocalPlaneResolutionUnit: 4, #mm,
-                piexif.ExifIFD.FocalPlaneXResolution: to_rational(round(im.width / 7.2, 7)),
-                piexif.ExifIFD.FocalPlaneYResolution: to_rational(round(im.width / 7.2, 7)),
+                piexif.ExifIFD.FocalPlaneXResolution: to_rational(round(im.width / CCD_WIDTH, 7)),
+                piexif.ExifIFD.FocalPlaneYResolution: to_rational(round(im.height / CCD_WIDTH, 7)),
             }
         }
         
