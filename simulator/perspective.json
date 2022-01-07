@@ -1,0 +1,16 @@
+{
+  "SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/master/docs/settings.md",
+  "SettingsVersion": 1.2,
+  "SimMode": "ComputerVision",
+  "ViewMode": "Manual",
+  "CameraDefaults": {
+    "CaptureSettings": [
+      {
+        "ImageType": 0,
+        "Width": 4000,
+        "Height": 2250,
+        "ProjectionMode": "perspective"
+      }
+    ]
+  }
+}

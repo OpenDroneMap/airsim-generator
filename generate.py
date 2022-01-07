@@ -84,20 +84,20 @@ print("Geographical center (UTM)... ", end="")
 geo_center = [boundaries[0][0] + area_width / 2.0, boundaries[0][1] + area_height / 2.0, boundaries[0][2]]
 print(geo_center)
 
-local_boundaries = [
+survey_boundaries = [
     (boundaries[0][0] - geo_center[0], boundaries[0][1] - geo_center[1]),
     (boundaries[1][0] - geo_center[0], boundaries[1][1] - geo_center[1]),
 ]
 
-print("Local boundaries (m): %s" % local_boundaries)
+print("Survey boundaries (m): %s" % survey_boundaries)
 
 if args.survey:
-    local_boundaries = json.loads(args.survey)
-    print("User-defined survey boundaries (m): %s" % local_boundaries)
+    survey_boundaries = json.loads(args.survey)
+    print("User-defined survey boundaries (m): %s" % survey_boundaries)
 else:
     print("Surveying entire world")
 
-maxx, maxy, minx, miny = (local_boundaries[1][0], local_boundaries[1][1], local_boundaries[0][0], local_boundaries[0][1])
+minx, miny, maxx, maxy = (survey_boundaries[0][0], survey_boundaries[0][1], survey_boundaries[1][0], survey_boundaries[1][1])
 
 if args.dsm:
     c = Camera(client, geo_center, airsim.ImageType.DepthPlanar, utm_proj)
@@ -106,7 +106,8 @@ else:
 
 print("Fetching image size... ", end="", flush=True)
 img_width, img_height = c.get_image_size()
-
+#img_width = 256
+#img_height = 256
 print("%sx%spx" % (img_width, img_height))
 if img_width != img_height and args.dsm:
     raise "Image width and height must match in DSM mode"
@@ -120,9 +121,14 @@ if args.dsm:
     print("Number tiles X: %s" % num_tiles_x)
     print("Number tiles Y: %s" % num_tiles_y)
 
+    # Top/left corner
+    start_x = maxx
+    start_y = miny
+
     # Convert to UTM
-    offset_x_utm = geo_center[0] - (maxx - minx) / 2.0
-    offset_y_utm = geo_center[1] + (maxy - miny) / 2.0 
+    offset_x_utm = geo_center[0]
+    offset_y_utm = geo_center[1] + num_tiles_x * args.ortho_width
+
     res = args.ortho_width / img_width
 
     # Allocate image
@@ -134,18 +140,14 @@ if args.dsm:
         'dtype': rasterio.dtypes.float32,
         'crs': {'init': 'epsg:%s' % to_epsg(utm_proj)},
         'transform': rasterio.Affine(res, 0.0, offset_x_utm,
-                                     0.0, res, offset_y_utm)
+                                     0.0, -res, offset_y_utm)
     }
 
     print("Output image size: %sx%spx" % (profile['width'], profile['height']))
 
-    # Top/left corner
-    start_x = maxx - args.ortho_width / 2.0
-    start_y = miny + args.ortho_width / 2.0
-
     pose = airsim.Pose(airsim.Vector3r(start_x, 
                                        start_y, 
-                                       -args.altitude), LOOK_DOWN)
+                                       -args.altitude * 2), LOOK_DOWN)
 
     outfile = os.path.join(args.output_dir, "ground_truth_dsm.tif")
     with rasterio.open(outfile, "w", **profile) as f:
@@ -161,6 +163,7 @@ if args.dsm:
                 w = rasterio.windows.Window(y * img_height, x * img_width, img_width, img_height)
                 print(w)
                 f.write(data, window=w, indexes=1)
+
             pose.position.x_val = start_x
             pose.position.y_val += args.ortho_width
 
