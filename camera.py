@@ -26,6 +26,11 @@ class Camera:
         self.position = [vpos.x_val, vpos.y_val, vpos.z_val]
 
         self.time = datetime.now()
+    
+    def get_image_size(self):
+        imData = self.client.simGetImage('0', self.imageType)
+        im = Image.open(io.BytesIO(imData))
+        return (im.width, im.height)
 
     def move_by(self, x, y, z = 0):
         self.position[0] += x
@@ -70,7 +75,7 @@ class Camera:
                 piexif.ExifIFD.FocalLength: to_rational(FOCAL),
                 piexif.ExifIFD.FocalPlaneResolutionUnit: 4, #mm,
                 piexif.ExifIFD.FocalPlaneXResolution: to_rational(round(im.width / CCD_WIDTH, 7)),
-                piexif.ExifIFD.FocalPlaneYResolution: to_rational(round(im.height / CCD_WIDTH, 7)),
+                piexif.ExifIFD.FocalPlaneYResolution: to_rational(round(im.width / CCD_WIDTH, 7)),
             }
         }
         

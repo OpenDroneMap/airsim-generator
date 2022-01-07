@@ -101,8 +101,6 @@ def image_footprint(camera_pos, image_width, image_height):
     x_view = 2.0 * math.atan(sensor_width / (2.0 * FOCAL))
     y_view = 2.0 * math.atan(sensor_height / (2.0 * FOCAL))
 
-    print(sensor_width, sensor_height)
-
     pitch = -90 # nadir
     roll = 0
     yaw = 0 # TODO!
@@ -118,3 +116,14 @@ def image_footprint(camera_pos, image_width, image_height):
     lr = rotate((camera_pos[0] + right, camera_pos[1] + bottom), camera_pos, -yaw)
 
     return [ul, ur, lr, ll]
+
+def calculate_overlap_offset(image_width, image_height, altitude, frontlap=0.85, sidelap=0.7):
+    gsd = (CCD_WIDTH * altitude * 100.0) / (FOCAL * image_width)
+    footprint_width = (gsd * image_width) / 100.0
+    footprint_height = (gsd * image_height) / 100.0
+
+    offset_x = (1 - frontlap) * footprint_height / frontlap
+    offset_y = (1 - sidelap) * footprint_width / sidelap
+    
+    return (offset_x, offset_y)
+    
