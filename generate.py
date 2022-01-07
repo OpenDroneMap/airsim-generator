@@ -20,7 +20,7 @@ parser.add_argument('host',
 parser.add_argument('--survey',
                 type=str,
                 default=None,
-                help='Axis-aligned area to survey (as a JSON array in world coordinates: [minx, miny, maxx, maxy]). Default: entire world boundaries.')
+                help='Axis-aligned area to survey (as a JSON array in local coordinates: [minx, miny, maxx, maxy]). Default: entire world boundaries.')
 parser.add_argument('--altitude',
                 type=float,
                 default=80,
@@ -84,6 +84,12 @@ local_boundaries = [
 
 print("Local boundaries (m): %s" % local_boundaries)
 
+if args.survey:
+    local_boundaries = json.loads(args.survey)
+    print("User-defined survey boundaries (m): %s" % local_boundaries)
+else:
+    print("Surveying entire world")
+
 c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj)
 
 print("Fetching image size...", end="")
@@ -102,13 +108,13 @@ num_photos_y = math.ceil((local_boundaries[1][1] - local_boundaries[0][1]) / off
 x_direction = 1
 
 print("Number of photos: %s" % (num_photos_x * num_photos_y))
+i = 0
 for y in range(0, num_photos_y):
     for x in range(0, num_photos_x):
-        c.move_by(offset_x * x_direction, 0)
-        c.capture(os.path.join(args.output_dir, 'perspective%04d.jpg' % x))
-
-        if x == 4:
-            exit(1)
+        if x > 0:
+            c.move_by(offset_x * x_direction, 0)
+        c.capture(os.path.join(args.output_dir, 'perspective%04d.jpg' % i))
+        i += 1
 
     c.move_by(0, offset_y)
     x_direction *= -1
