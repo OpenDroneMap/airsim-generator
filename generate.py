@@ -105,11 +105,8 @@ else:
     c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj)
 
 print("Fetching image size... ", end="", flush=True)
-# img_width, img_height = c.get_image_size()
-# img_width = 4000
-# img_height = 2250
-img_width = 512
-img_height = 512
+img_width, img_height = c.get_image_size()
+
 print("%sx%spx" % (img_width, img_height))
 if img_width != img_height and args.dsm:
     raise "Image width and height must match in DSM mode"
@@ -123,13 +120,9 @@ if args.dsm:
     print("Number tiles X: %s" % num_tiles_x)
     print("Number tiles Y: %s" % num_tiles_y)
 
-    # Top/left corner
-    start_x = maxx + (maxx - minx) / 2.0
-    start_y = miny + (maxy - miny) / 2.0
-
     # Convert to UTM
-    start_x_utm = geo_center[0] - area_width / 2.0
-    start_y_utm = geo_center[1] + area_height / 2.0 
+    offset_x_utm = geo_center[0] - (maxx - minx) / 2.0
+    offset_y_utm = geo_center[1] + (maxy - miny) / 2.0 
     res = args.ortho_width / img_width
 
     # Allocate image
@@ -140,15 +133,19 @@ if args.dsm:
         'count': 1, 
         'dtype': rasterio.dtypes.float32,
         'crs': {'init': 'epsg:%s' % to_epsg(utm_proj)},
-        'transform': rasterio.Affine(res, 0.0, start_x_utm,
-                                     0.0, res, start_y_utm)
+        'transform': rasterio.Affine(res, 0.0, offset_x_utm,
+                                     0.0, res, offset_y_utm)
     }
 
     print("Output image size: %sx%spx" % (profile['width'], profile['height']))
 
+    # Top/left corner
+    start_x = maxx - args.ortho_width / 2.0
+    start_y = miny + args.ortho_width / 2.0
+
     pose = airsim.Pose(airsim.Vector3r(start_x, 
-                                    start_y, 
-                                    -args.altitude), LOOK_DOWN)
+                                       start_y, 
+                                       -args.altitude), LOOK_DOWN)
 
     outfile = os.path.join(args.output_dir, "ground_truth_dsm.tif")
     with rasterio.open(outfile, "w", **profile) as f:
