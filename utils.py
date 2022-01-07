@@ -45,6 +45,12 @@ class GeoToLocalTransformer:
     def reverse(self, x, y, z):
         return self.cti.TransformPoint(x, y, z)
 
+def to_epsg(proj_def):
+    c = osr.SpatialReference()
+    c.ImportFromProj4(proj_def)
+    c.AutoIdentifyEPSG()
+    return c.GetAttrValue("AUTHORITY", 1)
+
 def to_rational(number):
     f = Fraction(str(number))
     return (f.numerator, f.denominator)

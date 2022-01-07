@@ -28,9 +28,15 @@ class Camera:
         self.time = datetime.now()
     
     def get_image_size(self):
-        imData = self.client.simGetImage('0', self.imageType)
-        im = Image.open(io.BytesIO(imData))
-        return (im.width, im.height)
+        if self.imageType == airsim.ImageType.Scene:
+            imData = self.client.simGetImage('0', self.imageType)
+            im = Image.open(io.BytesIO(imData))
+            return (im.width, im.height)
+        elif self.imageType == airsim.ImageType.DepthPlanar:
+            response = self.client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=True)])[0]
+            return (response.width, response.height)
+        else:
+            raise("Unsupported image type")
 
     def move_by(self, x, y, z = 0):
         self.position[0] += x
@@ -82,4 +88,4 @@ class Camera:
         im = im.convert('RGB')
         im.save(filename, exif=piexif.dump(exif_d))
 
-        print(filename)
+        return filename
