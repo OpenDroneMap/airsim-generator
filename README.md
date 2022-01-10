@@ -4,6 +4,6 @@ Generate synthetic drone photos and elevation models from Microsoft AirSim.
 
 ## Setting DSM Ground Resolution
 
-`OrthoWidth = 512 * (resolution in cm/px) / 100`
+`OrthoWidth = (Image Width) * (resolution in cm/px) / 100`
 
-For a 5 cm/px DSM, use `OrthoWidth` = `25.6`
+For a 5 cm/px DSM, use `OrthoWidth` = `12.8` and `Width` = `256`

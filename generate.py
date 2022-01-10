@@ -38,7 +38,7 @@ parser.add_argument('--dsm',
                 default=False,
                 help="Generate a DSM of the survey area.")
 parser.add_argument('--ortho-width',
-                default=25.6,
+                default=12.8,
                 help="AirSim's camera ortho width value (MUST match the simulation settings). Default: %(default)s")
 parser.add_argument('--output-dir',
                 type=str,
@@ -122,7 +122,7 @@ if args.dsm:
     print("Number tiles Y: %s" % num_tiles_y)
 
     # Top/left corner
-    start_x = maxx
+    start_x = maxx + (num_tiles_x * args.ortho_width - (maxx - minx))
     start_y = miny
 
     # Convert to UTM
@@ -145,8 +145,12 @@ if args.dsm:
 
     print("Output image size: %sx%spx" % (profile['width'], profile['height']))
 
-    pose = airsim.Pose(airsim.Vector3r(start_x, 
-                                       start_y, 
+    pad_x = num_tiles_x * args.ortho_width - (maxx - minx)
+    #pad_y = num_tiles_y * args.ortho_width - (maxy - miny)
+    
+
+    pose = airsim.Pose(airsim.Vector3r(start_x - args.ortho_width / 2.0, 
+                                       start_y + args.ortho_width / 2.0, 
                                        -args.altitude * 2), LOOK_DOWN)
 
     outfile = os.path.join(args.output_dir, "ground_truth_dsm.tif")
@@ -163,8 +167,9 @@ if args.dsm:
                 w = rasterio.windows.Window(y * img_height, x * img_width, img_width, img_height)
                 print(w)
                 f.write(data, window=w, indexes=1)
+            #exit(1)
 
-            pose.position.x_val = start_x
+            pose.position.x_val = start_x  - args.ortho_width / 2.0
             pose.position.y_val += args.ortho_width
 
     #data[:256,:256] = 1000
