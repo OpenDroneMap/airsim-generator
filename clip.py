@@ -23,4 +23,7 @@ minx = geoTransform[0]
 maxy = geoTransform[3]
 maxx = minx + geoTransform[1] * data.RasterXSize
 miny = maxy + geoTransform[5] * data.RasterYSize
-subprocess.check_output('gdal_translate -projwin ' + ' '.join([str(x) for x in [minx, maxy, maxx, miny]]) + ' -of GTiff ' + quote(args.input) + " " + quote(args.output), shell=True)
+
+cmd = 'gdal_translate -projwin ' + ' '.join([str(x) for x in [minx, maxy, maxx, miny]]) + ' -a_ullr ' + ' '.join([str(x) for x in [minx, maxy, maxx, miny]]) + ' -of GTiff ' + quote(args.input) + " " + quote(args.output)
+print(cmd)
+subprocess.check_output(cmd, shell=True)
