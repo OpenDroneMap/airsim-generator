@@ -48,10 +48,14 @@ parser.add_argument('--flash-survey',
                 action="store_true",
                 default=False,
                 help="Plot in AirSim the survey's extent and exit.")
-parser.add_argument('--world-offset-z',
+parser.add_argument('--world-z-origin',
                 type=float,
-                default=5,
-                help='World origin offset in meters. Default: %(default)s%')
+                default=4.85,
+                help='World Z origin value in meters. This is the elevation value from the DSM at (0, 0, --local-z-origin). Default: %(default)s%')
+parser.add_argument('--local-z-origin',
+                type=float,
+                default=1.15,
+                help='Local Z origin value in meters. This is the elevation value in local coordinates for (0, 0, --world-z-origin). Default: %(default)s%')
 
 args = parser.parse_args()
 
@@ -117,12 +121,13 @@ if args.flash_survey:
                             airsim.Vector3r(minx, maxy, plot_z),
                             airsim.Vector3r(minx, miny, plot_z),
                             ], color_rgba=[0.0, 1.0, 0.0, 1.0], thickness=200.0, duration=10, is_persistent=False)
+    print("Survey area flashed")
     exit(0)
 
 if args.dsm:
-    c = Camera(client, geo_center, airsim.ImageType.DepthPlanar, utm_proj, args.world_offset_z)
+    c = Camera(client, geo_center, airsim.ImageType.DepthPlanar, utm_proj, args.world_z_origin, args.local_z_origin)
 else:
-    c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj, args.world_offset_z)
+    c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj, args.world_z_origin, args.local_z_origin)
 
 print("Fetching image size... ", end="", flush=True)
 img_width, img_height = c.get_image_size()
@@ -146,8 +151,8 @@ if args.dsm:
     start_y = miny
 
     # Convert to UTM
-    offset_x_utm = geo_center[0]
-    offset_y_utm = geo_center[1] + num_tiles_x * args.ortho_width
+    offset_x_utm = geo_center[0] + miny
+    offset_y_utm = geo_center[1] + minx + num_tiles_x * args.ortho_width
 
     res = args.ortho_width / img_width
 
@@ -173,6 +178,11 @@ if args.dsm:
                                        start_y + args.ortho_width / 2.0, 
                                        -args.altitude * 2), LOOK_DOWN)
 
+    # Make empty request to flush depth values (?)
+    # We get strange tiles if we don't do this at the beginning
+    client.simSetVehiclePose(pose, ignore_collision=True)
+    response = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.DepthPlanar, pixels_as_float=True, compress=True)])[0]
+                
     outfile = os.path.join(args.output_dir, "ground_truth_dsm.tif")
     with rasterio.open(outfile, "w", **profile) as f:
         for y in range(0, num_tiles_y):
@@ -187,7 +197,7 @@ if args.dsm:
                 w = rasterio.windows.Window(y * img_height, x * img_width, img_width, img_height)
                 print(w)
                 f.write(data, window=w, indexes=1)
-                # exit(1)
+                #exit(1)
 
             pose.position.x_val = start_x  - args.ortho_width / 2.0
             pose.position.y_val += args.ortho_width
