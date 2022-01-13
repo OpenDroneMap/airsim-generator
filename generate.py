@@ -44,7 +44,14 @@ parser.add_argument('--output-dir',
                 type=str,
                 default=".",
                 help="Directory where to output results. Default: %(default)s")
-
+parser.add_argument('--flash-survey',
+                action="store_true",
+                default=False,
+                help="Plot in AirSim the survey's extent and exit.")
+parser.add_argument('--world-offset-z',
+                type=float,
+                default=5,
+                help='World origin offset in meters. Default: %(default)s%')
 
 args = parser.parse_args()
 
@@ -99,10 +106,23 @@ else:
 
 minx, miny, maxx, maxy = (survey_boundaries[0][0], survey_boundaries[0][1], survey_boundaries[1][0], survey_boundaries[1][1])
 
+if args.flash_survey:
+    plot_z = -5
+    client.simPlotLineList([airsim.Vector3r(minx, miny, plot_z),
+                            airsim.Vector3r(maxx, miny, plot_z),
+                            airsim.Vector3r(maxx, miny, plot_z),
+                            airsim.Vector3r(maxx, maxy, plot_z),
+                            airsim.Vector3r(maxx, maxy, plot_z),
+                            airsim.Vector3r(minx, maxy, plot_z),
+                            airsim.Vector3r(minx, maxy, plot_z),
+                            airsim.Vector3r(minx, miny, plot_z),
+                            ], color_rgba=[0.0, 1.0, 0.0, 1.0], thickness=200.0, duration=10, is_persistent=False)
+    exit(0)
+
 if args.dsm:
-    c = Camera(client, geo_center, airsim.ImageType.DepthPlanar, utm_proj)
+    c = Camera(client, geo_center, airsim.ImageType.DepthPlanar, utm_proj, args.world_offset_z)
 else:
-    c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj)
+    c = Camera(client, geo_center, airsim.ImageType.Scene, utm_proj, args.world_offset_z)
 
 print("Fetching image size... ", end="", flush=True)
 img_width, img_height = c.get_image_size()
@@ -167,12 +187,10 @@ if args.dsm:
                 w = rasterio.windows.Window(y * img_height, x * img_width, img_width, img_height)
                 print(w)
                 f.write(data, window=w, indexes=1)
-            #exit(1)
+                # exit(1)
 
             pose.position.x_val = start_x  - args.ortho_width / 2.0
             pose.position.y_val += args.ortho_width
-
-    #data[:256,:256] = 1000
 
     print("Wrote %s" % outfile)
 else:

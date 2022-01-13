@@ -11,15 +11,15 @@ from camera_constants import FOCAL, CCD_WIDTH
 LOOK_DOWN = airsim.to_quaternion(-pi/2, 0, 0)
 
 class Camera:
-    def __init__(self, client, geo_center, imageType, utm_proj):
+    def __init__(self, client, geo_center, imageType, utm_proj, world_offset_z):
         self.client = client
-        self.geo = geo_center
+        self.geo = [*geo_center]
         self.imageType = imageType
 
         self.ct = GeoToLocalTransformer(utm_proj)
 
         # Init camera position
-        self.geo[2] = 0
+        self.geo[2] = world_offset_z
         self.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(0, 0, 0), LOOK_DOWN), ignore_collision=True)
         
         vpos = self.client.simGetVehiclePose().position
